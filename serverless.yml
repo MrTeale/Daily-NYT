@@ -14,7 +14,7 @@ provider:
 
 custom:
   pythonRequirements:
-    dockerizePip: true
+    dockerizePip: 'non-linux'
   apigwBinary:
     types:
       - '*/*'
