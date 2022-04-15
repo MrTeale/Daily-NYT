@@ -46,7 +46,8 @@ functions:
           path: /
           method: get
           cors: true
-          contentHandling: CONVERT_TO_BINARY
+          response:
+            contentHandling: CONVERT_TO_BINARY
 
 resources:
   Resources:
