@@ -35,7 +35,7 @@ def get_pdf_scan(date_value):
 
 def main(event, context):
     # Get current time in NYC
-    current_time = datetime.now(pytz.timezone('America/New_York'))
+    current_time = datetime.now(pytz.timezone('EST'))
 
     # Download the raw image
     try:
