@@ -63,12 +63,6 @@ Resources:
         AllowMethods: "'GET,OPTIONS'"
         AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
         AllowOrigin: "'*'"
-      Domain:
-        DomainName: nyt.lachlanteale.com
-        CertificateArn: !Ref DomainCertificateArn
-        EndpointConfiguration: EDGE
-        Route53:
-          HostedZoneId: !Ref HostedZoneId
 
   # Lambda Function
   MainFunction:
@@ -91,25 +85,10 @@ Resources:
         Application: daily-nyt
         Environment: prod
 
-Parameters:
-  DomainCertificateArn:
-    Type: String
-    Description: ARN of the ACM certificate for nyt.lachlanteale.com
-    Default: ''
-
-  HostedZoneId:
-    Type: String
-    Description: Route53 Hosted Zone ID for the domain
-    Default: ''
-
 Outputs:
   ApiUrl:
     Description: "API Gateway endpoint URL for Prod stage"
     Value: !Sub "https://${DailyNYTApi}.execute-api.${AWS::Region}.amazonaws.com/prod/"
-
-  CustomDomainUrl:
-    Description: "Custom domain URL"
-    Value: "https://nyt.lachlanteale.com/"
 
   FunctionArn:
     Description: "Lambda Function ARN"
