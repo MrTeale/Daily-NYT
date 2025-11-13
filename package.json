@@ -1,10 +1,20 @@
 {
-  "dependencies": {
-    "serverless": "^4.1.12",
-    "serverless-apigw-binary": "^0.4.4",
-    "serverless-domain-manager": "^6.0.3"
+  "name": "daily-nyt",
+  "version": "1.0.0",
+  "description": "Daily NYT front page fetcher using AWS SAM",
+  "scripts": {
+    "validate": "sam validate --lint",
+    "build": "sam build",
+    "build:container": "sam build --use-container",
+    "deploy": "sam deploy",
+    "deploy:prod": "sam deploy --config-env prod",
+    "deploy:guided": "sam deploy --guided",
+    "local:api": "sam local start-api",
+    "local:invoke": "sam local invoke MainFunction",
+    "logs": "sam logs -n MainFunction --stack-name daily-nyt-prod --tail",
+    "delete": "sam delete --stack-name daily-nyt-prod"
   },
-  "devDependencies": {
-    "serverless-python-requirements": "^6.1.0"
-  }
+  "keywords": ["aws", "sam", "serverless", "lambda", "nyt"],
+  "author": "MrTeale",
+  "license": "MIT"
 }
