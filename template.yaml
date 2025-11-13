@@ -1,0 +1,120 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Daily NYT - Serverless application to fetch and convert NYT front page
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 512
+    Runtime: python3.9
+    Architectures:
+      - x86_64
+    Environment:
+      Variables:
+        STAGE: prod
+
+Resources:
+  # Lambda Layer for Poppler PDF library
+  PopplerLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: daily-nyt-poppler
+      Description: Poppler PDF processing library for Lambda
+      ContentUri: layers/poppler.zip
+      CompatibleRuntimes:
+        - python3.9
+      RetentionPolicy: Retain
+
+  # IAM Role for Lambda Function
+  NYTIAMRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /api/
+      RoleName: NYTIAMRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: NYTIAMPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource:
+                  - !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*:*:*'
+
+  # API Gateway
+  DailyNYTApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: prod
+      BinaryMediaTypes:
+        - '*~1*'  # Represents */* in API Gateway
+      Cors:
+        AllowMethods: "'GET,OPTIONS'"
+        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+        AllowOrigin: "'*'"
+      Domain:
+        DomainName: nyt.lachlanteale.com
+        CertificateArn: !Ref DomainCertificateArn
+        EndpointConfiguration: EDGE
+        Route53:
+          HostedZoneId: !Ref HostedZoneId
+
+  # Lambda Function
+  MainFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: daily-nyt-main
+      CodeUri: .
+      Handler: handler.main
+      Role: !GetAtt NYTIAMRole.Arn
+      Layers:
+        - !Ref PopplerLayer
+      Events:
+        GetNYT:
+          Type: Api
+          Properties:
+            RestApiId: !Ref DailyNYTApi
+            Path: /
+            Method: get
+      Tags:
+        Application: daily-nyt
+        Environment: prod
+
+Parameters:
+  DomainCertificateArn:
+    Type: String
+    Description: ARN of the ACM certificate for nyt.lachlanteale.com
+    Default: ''
+
+  HostedZoneId:
+    Type: String
+    Description: Route53 Hosted Zone ID for the domain
+    Default: ''
+
+Outputs:
+  ApiUrl:
+    Description: "API Gateway endpoint URL for Prod stage"
+    Value: !Sub "https://${DailyNYTApi}.execute-api.${AWS::Region}.amazonaws.com/prod/"
+
+  CustomDomainUrl:
+    Description: "Custom domain URL"
+    Value: "https://nyt.lachlanteale.com/"
+
+  FunctionArn:
+    Description: "Lambda Function ARN"
+    Value: !GetAtt MainFunction.Arn
+
+  FunctionIamRole:
+    Description: "IAM Role ARN for Lambda Function"
+    Value: !GetAtt NYTIAMRole.Arn
