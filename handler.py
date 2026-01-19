@@ -1,8 +1,8 @@
 import base64
 from datetime import datetime, timedelta
 from io import BytesIO
+from zoneinfo import ZoneInfo
 
-import pytz
 import requests
 from pdf2image import convert_from_bytes
 from PIL import Image
@@ -35,7 +35,7 @@ def get_pdf_scan(date_value):
 
 def main(event, context):
     # Get current time in NYC
-    current_time = datetime.now(pytz.timezone('EST'))
+    current_time = datetime.now(ZoneInfo('America/New_York'))
 
     # Download the raw image
     try:
