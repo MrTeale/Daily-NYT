@@ -16,12 +16,12 @@ def send_file(path):
     image_string = image_64_encode.decode('utf-8')
 
     return {
-        "statusCode": "200",
+        "statusCode": 200,
         "body": image_string,
         "headers": {
-            "Content-Type": "image/gif",
+            "Content-Type": "image/jpeg",
         },
-        "isBase64Encoded": "true"
+        "isBase64Encoded": True
     }
 
 
@@ -40,8 +40,18 @@ def main(event, context):
     # Download the raw image
     try:
         pdf_scan = get_pdf_scan(current_time)
-    except requests.HTTPError as e:
-        pdf_scan = get_pdf_scan(current_time - timedelta(days=1))
+    except requests.HTTPError:
+        try:
+            pdf_scan = get_pdf_scan(current_time - timedelta(days=1))
+        except requests.HTTPError:
+            return {
+                "statusCode": 404,
+                "body": "NYT front page not available",
+                "headers": {
+                    "Content-Type": "text/plain",
+                },
+                "isBase64Encoded": False
+            }
     
     jpegopt_value = {
         "quality": 100,
