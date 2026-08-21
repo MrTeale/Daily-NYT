@@ -5,7 +5,7 @@ A serverless application that fetches and converts the New York Times front page
 ## Architecture
 
 This application uses:
-- **AWS Lambda** (Python 3.9) - Fetches NYT front page PDF and converts to JPEG
+- **AWS Lambda** (Python 3.12) - Fetches NYT front page PDF and converts to JPEG
 - **API Gateway** - REST API endpoint for accessing the Lambda function
 - **Lambda Layer** - Poppler library for PDF processing
 - **Custom Domain** - nyt.lachlanteale.com
@@ -14,7 +14,7 @@ This application uses:
 
 - AWS CLI configured with appropriate credentials
 - AWS SAM CLI installed ([Installation Guide](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-install.html))
-- Python 3.9
+- Python 3.12
 - Docker (for building with --use-container)
 
 ## Local Development
@@ -22,8 +22,16 @@ This application uses:
 ### Install Dependencies
 
 ```bash
-pip install -r requirements.txt
+pip install -r requirements-dev.txt   # runtime deps (src/requirements.txt) + pytest
 ```
+
+### Run Tests
+
+```bash
+pytest -q
+```
+
+The tests mock the NYT HTTP calls and the PDF render, so no Poppler install is needed locally.
 
 ### Build the Application
 
@@ -99,12 +107,23 @@ npm run delete           # Delete CloudFormation stack
 
 **Method:** GET
 
-**Response:** Base64-encoded JPEG image of the NYT front page
+**Response:** JPEG image (1440x2560, grayscale) of the NYT front page. API Gateway decodes the
+Lambda's base64 body, so clients receive raw `image/jpeg` bytes.
+
+| Status | Meaning |
+|---|---|
+| `200` | Image returned. `X-NYT-Date` header says which edition was served. |
+| `503` | No scan available for today or the previous 2 days; retry after `Retry-After` seconds. |
+| `500` | The PDF was fetched but could not be rendered (see CloudWatch logs). |
+
+NYT's CDN answers **HTTP 403** (not 404) for a day whose scan hasn't been uploaded yet — typically
+until ~01:00–01:30 America/New_York. The handler treats any non-2xx / non-PDF response as "not
+available" and falls back to the previous day, so the endpoint stays up across midnight.
 
 ### Example Usage
 
 ```bash
-curl https://nyt.lachlanteale.com/ | base64 -d > nyt_frontpage.jpg
+curl -sS https://nyt.lachlanteale.com/ -o nyt_frontpage.jpg
 ```
 
 ## Project Structure
@@ -115,12 +134,15 @@ Daily-NYT/
 │   └── workflows/
 │       └── deploy.yml          # GitHub Actions workflow
 ├── layers/
-│   └── poppler.zip            # Poppler PDF library Lambda Layer
-├── handler.py                  # Lambda function code
-├── requirements.txt            # Python dependencies
+│   └── poppler.zip            # Poppler PDF library Lambda Layer (not bundled into the function)
+├── src/
+│   ├── handler.py             # Lambda function code (CodeUri)
+│   └── requirements.txt       # Runtime Python dependencies
+├── tests/
+│   └── test_handler.py        # Unit tests (run in CI before deploy)
+├── requirements-dev.txt        # Dev/CI dependencies
 ├── template.yaml              # SAM template (CloudFormation)
-├── samconfig.toml            # SAM CLI configuration
-└── package.json              # NPM scripts and metadata
+└── samconfig.toml            # SAM CLI configuration
 ```
 
 ## Configuration

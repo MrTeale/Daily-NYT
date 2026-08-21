@@ -69,7 +69,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: daily-nyt-main
-      CodeUri: .
+      CodeUri: src/
       Handler: handler.main
       Role: !GetAtt NYTIAMRole.Arn
       Layers:
